@@ -1,0 +1,44 @@
+name: Deploy
+
+# This repo is only the public home of the Pochita website: it holds no site files.
+# The site's source is in the private repo mkhzp/Pochita (docs_site/). This fetches
+# that folder at deploy time and publishes it to GitHub Pages; nothing is committed here.
+# (Source of truth for this file: website/.github/workflows/deploy.yml in mkhzp/Pochita.)
+
+on:
+  repository_dispatch:
+    types: [pochita-updated]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Fetch the site from mkhzp/Pochita
+        uses: actions/checkout@v4
+        with:
+          repository: mkhzp/Pochita
+          ref: main
+          token: ${{ secrets.WEBSITE_TOKEN }}
+          sparse-checkout: docs_site
+          persist-credentials: false
+      - run: touch docs_site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs_site
+          retention-days: 1
+      - id: deployment
+        uses: actions/deploy-pages@v4
